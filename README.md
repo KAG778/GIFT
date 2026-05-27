@@ -58,20 +58,28 @@ The codebase expects a single CSV of daily SP500-style prices at
 We use the publicly released **FINSABER price dataset** (an external,
 third-party benchmark dataset — not produced by the authors of this
 submission). It covers US equity prices from 2000 to 2024 (including
-delisted tickers), hosted on Hugging Face:
+delisted tickers), hosted on Hugging Face.
+
+**One-line download (recommended)**:
 
 ```bash
-# ~253 MB; takes 1-3 minutes depending on bandwidth
+bash scripts/download_data.sh
+```
+
+This script picks `wget` or `curl` automatically, skips the download if the
+file already exists with a sane size, validates the byte count after
+download, and prints the next command to run. Pass `--force` to re-download
+unconditionally.
+
+**Manual download** if you prefer:
+
+```bash
 mkdir -p data
 wget -O data/sp500_prices.csv \
     https://huggingface.co/datasets/waylonli/FINSABER-data/resolve/main/data/price/all_sp500_prices_2000_2024_delisted_include.csv
-```
-
-Or with `curl`:
-
-```bash
-curl -L -o data/sp500_prices.csv \
-    https://huggingface.co/datasets/waylonli/FINSABER-data/resolve/main/data/price/all_sp500_prices_2000_2024_delisted_include.csv
+# or:
+# curl -L -o data/sp500_prices.csv \
+#     https://huggingface.co/datasets/waylonli/FINSABER-data/resolve/main/data/price/all_sp500_prices_2000_2024_delisted_include.csv
 ```
 
 Please consult the dataset's Hugging Face page for license and citation
