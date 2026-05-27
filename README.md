@@ -1,9 +1,21 @@
-# GIFT: LLM-Guided Iterative Feature Tuning for Portfolio PPO
+# GIFT: LLM-Guided State-Reward Interface for Financial Reinforcement Learning
 
-A closed-loop framework that couples LLM-driven feature engineering with PPO-based
-portfolio optimization. The LLM iteratively rewrites `revise_state` and
-`intrinsic_reward` Python code; a PPO agent trains on the augmented state; per-feature
-IC and SHAP diagnostics are fed back to the LLM for the next iteration.
+GIFT is a framework in which an LLM acts as the **state-reward interface** for a
+downstream RL agent solving financial decision-making tasks. Concretely, the LLM
+generates two Python functions per iteration:
+
+- `revise_state`: augments the raw market observation into a richer state
+  representation;
+- `intrinsic_reward`: emits an auxiliary reward signal aligned with the task.
+
+A PPO agent trains on the augmented state with the augmented reward; per-feature
+IC and SHAP diagnostics are computed on the trained critic and fed back to the
+LLM as natural-language COT feedback, closing the loop for the next iteration.
+
+This repository implements GIFT for **portfolio optimization with PPO** as the
+main experimental instantiation — five US equities plus cash, six rolling
+windows from 2019 to 2024, mean-variance reward augmented by the LLM-generated
+intrinsic reward and rule-based shaping. See *Reproducing Main Experiments*.
 
 > **Anonymous double-blind submission.** This release does not include author
 > identity, affiliation, contact information, or links to any external account or
@@ -274,8 +286,8 @@ attribution, and contact information will replace this one.
 
 ```bibtex
 @misc{anonymous2026gift,
-  title  = {GIFT: LLM-Guided Iterative Feature Tuning for Portfolio
-            Optimization with PPO},
+  title  = {GIFT: LLM-Guided State-Reward Interface for Financial
+            Reinforcement Learning},
   author = {Anonymous Authors},
   year   = {2026},
   note   = {Anonymous double-blind submission},
