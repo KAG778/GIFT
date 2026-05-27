@@ -51,7 +51,31 @@ If your platform needs a specific PyTorch wheel (e.g. CUDA 11.8), install
 ## Data Preparation
 
 The codebase expects a single CSV of daily SP500-style prices at
-`./data/sp500_prices.csv`. Required columns (case-insensitive, any column order):
+`./data/sp500_prices.csv`.
+
+### Where to get the data
+
+We use the publicly released **FINSABER price dataset** (an external,
+third-party benchmark dataset — not produced by the authors of this
+submission). It covers US equity prices from 2000 to 2024 (including
+delisted tickers), hosted on Hugging Face:
+
+```bash
+# ~253 MB; takes 1-3 minutes depending on bandwidth
+mkdir -p data
+wget -O data/sp500_prices.csv \
+    https://huggingface.co/datasets/waylonli/FINSABER-data/resolve/main/data/price/all_sp500_prices_2000_2024_delisted_include.csv
+```
+
+Or with `curl`:
+
+```bash
+curl -L -o data/sp500_prices.csv \
+    https://huggingface.co/datasets/waylonli/FINSABER-data/resolve/main/data/price/all_sp500_prices_2000_2024_delisted_include.csv
+```
+
+Please consult the dataset's Hugging Face page for license and citation
+information. The expected CSV schema (case-insensitive, any column order):
 
 | column      | type   | notes                                        |
 |-------------|--------|----------------------------------------------|
@@ -64,14 +88,15 @@ The codebase expects a single CSV of daily SP500-style prices at
 | `adj_close` | float  | adjusted close (used as the price feature)   |
 | `volume`    | float  |                                              |
 
-The default config uses the 5-ticker universe `[TSLA, NFLX, AMZN, MSFT, JNJ]` over
-roughly 2018–2024, but any superset works (filtered at load time). The project does
-not ship market data; build the CSV with `yfinance` or any equivalent vendor.
+The default config uses the 5-ticker universe `[TSLA, NFLX, AMZN, MSFT, JNJ]`
+spanning 2019–2024 (training/test windows). Any superset of these tickers
+works — non-target tickers are filtered out at load time. If you prefer your
+own data source, just produce a CSV matching the schema above and drop it at
+`./data/sp500_prices.csv`.
 
-Convert the CSV into the date-indexed pickle that `PortfolioEnv` consumes:
+### Convert CSV to pickle
 
 ```bash
-# Place your CSV at ./data/sp500_prices.csv (or pass --csv path/to/file.csv):
 python scripts/prepare_data.py
 ```
 
