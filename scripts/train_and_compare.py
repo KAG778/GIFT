@@ -1,7 +1,7 @@
 """
 Train GIFT-PPO vs Baseline-PPO and compare training characteristics.
 
-For each window (W1-W7):
+For each window (W1-W6):
   1. Load best GIFT code (revise_state + intrinsic_reward + reward rules)
   2. Train PPO with GIFT features -> record per-episode metrics
   3. Train PPO baseline (fixed features, no GIFT) -> record per-episode metrics
@@ -40,7 +40,7 @@ from metrics import sharpe_ratio, sortino_ratio, max_drawdown, calmar_ratio
 from reward_rules import REWARD_RULE_REGISTRY, build_reward_rules
 
 TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
-WINDOWS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7']
+WINDOWS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6']
 SEEDS = [123, 42, 789]
 RESULTS_BASE = PROJECT_DIR / 'results'
 OUTPUT_DIR = PROJECT_DIR / 'training_comparison'

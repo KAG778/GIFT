@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Parallel runner for the 7 rolling windows (W1-W7). Results land under
+Parallel runner for the 6 rolling windows (W1-W6). Results land under
 ``./results/``. The default ``WINDOW_GPU`` mapping pins two windows per GPU
-across 4 GPUs (W7 alone on GPU 3); edit the list below to match your
-hardware layout.
+across 3 GPUs; edit the list below to match your hardware layout.
 """
 import os
 import sys
@@ -25,12 +24,11 @@ os.chdir(project_dir)
 TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 RESULTS_DIR = project_dir / 'results'
 
-# (window, gpu_id) pairs — spread across 4 GPUs
+# (window, gpu_id) pairs — spread across 3 GPUs
 WINDOW_GPU = [
     ('W1', 0), ('W2', 0),
     ('W3', 1), ('W4', 1),
     ('W5', 2), ('W6', 2),
-    ('W7', 3),
 ]
 
 
@@ -64,7 +62,7 @@ def run_window(window: str, gpu_id: int):
 
 
 def main():
-    logger.info(f"Launching 7 windows in parallel — {TIMESTAMP}")
+    logger.info(f"Launching 6 windows in parallel — {TIMESTAMP}")
     logger.info(f"Results dir: {RESULTS_DIR}")
 
     procs = {}

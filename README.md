@@ -15,11 +15,11 @@ IC and SHAP diagnostics are fed back to the LLM for the next iteration.
 GIFT/
 ├── main.py                       # Single-window entry point
 ├── core/                         # Library code (env, PPO, GIFT controller, IC/SHAP)
-├── configs/                      # YAML configs: config_demo + config_W1..W7 + main
+├── configs/                      # YAML configs: config_demo + config_W1..W6 + main
 ├── scripts/
 │   ├── prepare_data.py           # CSV -> pickle preprocessing
 │   ├── train_single_window.py    # Train one window, save JSON
-│   ├── run_7_windows.py          # Multi-window orchestration (multi-GPU)
+│   ├── run_6_windows.py          # Multi-window orchestration (multi-GPU)
 │   ├── run_seeds_6windows.sh     # Bash dispatcher: 6 windows × 5 seeds = 30 runs
 │   ├── run_baseline.py           # Pure PPO baseline (no LLM features)
 │   ├── train_and_compare.py      # GIFT vs baseline training curves
@@ -35,8 +35,8 @@ GIFT/
 - Python 3.10+ (3.11 tested).
 - PyTorch 2.0+ (CUDA 11.8 or newer recommended; CPU also works for single-window
   runs).
-- A multi-GPU machine (4× A100-class) is recommended for the full 7-window × 5-seed
-  sweep but is not required to reproduce a single window.
+- A multi-GPU machine is recommended for the full 6-window × 5-seed sweep but
+  is not required to reproduce a single window.
 
 ## Installation
 
@@ -134,11 +134,10 @@ python main.py \
   --seed 42
 ```
 
-### Full main result — 7 windows × 5 seeds
+### Full main result — 6 windows × 5 seeds
 
-The shell dispatcher launches 6 windows (W1–W4, W6–W7) × 5 seeds = 30 runs and
-picks the least-loaded GPU for each launch (W5 is launched separately or added
-back to `WINDOWS`):
+The shell dispatcher launches 6 windows (W1–W6) × 5 seeds = 30 runs and picks
+the least-loaded GPU for each launch:
 
 ```bash
 export OPENAI_API_KEY=sk-...
@@ -148,10 +147,10 @@ export RESULTS_DIR=results     # optional
 bash scripts/run_seeds_6windows.sh
 ```
 
-A pure-Python orchestrator for all 7 windows is also provided:
+A pure-Python orchestrator for the same 6 windows is also provided:
 
 ```bash
-python scripts/run_7_windows.py
+python scripts/run_6_windows.py
 ```
 
 ### Baselines and training-curve comparison
@@ -160,7 +159,7 @@ python scripts/run_7_windows.py
 # Pure PPO without LLM features (uses the window described by --config):
 python scripts/run_baseline.py --config configs/config_W1.yaml --name ppo_baseline_W1
 
-# GIFT vs baseline training-curve comparison across all 7 windows:
+# GIFT vs baseline training-curve comparison across all 6 windows:
 python scripts/train_and_compare.py
 # Outputs land under ./training_comparison/ (plots + raw_metrics.json).
 ```
@@ -201,7 +200,7 @@ to exercise the env-dependent cases.
 ## Reproducibility Notes
 
 - All experiments in the paper use seeds `{42, 123, 456, 789, 1024}`.
-- Window definitions live in `configs/config_W{1..7}.yaml` (train / val / test
+- Window definitions live in `configs/config_W{1..6}.yaml` (train / val / test
   periods).
 - LLM nondeterminism (`temperature=0.7`) is the dominant source of variance
   across seeds; PPO baselines are exactly reproducible given a seed.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch 6 rolling windows (W1-W4, W6-W7) for 5 seeds = 30 experiments.
+# Launch 6 rolling windows (W1-W6) for 5 seeds = 30 experiments.
 # A simple multi-GPU dispatcher: at most MAX_PARALLEL jobs run at once,
 # each new job is placed on the least-loaded GPU.
 #
@@ -22,7 +22,7 @@ RESULTS_DIR="${RESULTS_DIR:-results}"
 mkdir -p "$RESULTS_DIR"
 
 SEEDS=(42 123 456 789 1024)
-WINDOWS=(1 2 3 4 6 7)
+WINDOWS=(1 2 3 4 5 6)
 
 # Build queue
 QUEUE=()
