@@ -1,0 +1,73 @@
+# Environment and secrets
+.env
+.env.*
+*.key
+*_key*
+*_secret*
+credentials*
+secrets*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Model weights / data caches
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+
+# Experiment outputs
+results/
+results_*/
+outputs/
+checkpoints/
+logs/
+wandb/
+tensorboard/
+runs/
+*.log
+nohup.out
+
+# Data (users provide their own files; see README)
+data/raw/
+data/processed/
+data/*.csv
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# AI assistants
+.claude/
+.agents/
+.codex/
+
+# Misc
+*.lock

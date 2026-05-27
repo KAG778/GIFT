@@ -1,0 +1,35 @@
+data:
+  pickle_file: data/portfolio_5stocks.pkl
+  csv_file: data/sp500_prices.csv
+  tickers: [TSLA, NFLX, AMZN, MSFT, JNJ]
+
+experiment:
+  train_period: ["2020-01-01", "2020-12-31"]
+  val_period: ["2021-01-01", "2021-06-30"]
+  test_period: ["2021-07-01", "2021-12-31"]
+  sample_count: 1
+  max_iterations: 2
+  no_llm: false
+
+llm:
+  model: gpt-4o-mini
+  temperature: 0.7
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+
+ppo:
+  hidden_dim: 64
+  actor_lr: 0.0003
+  critic_lr: 0.001
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  epochs_per_update: 3
+  batch_size: 32
+  max_episodes: 5
+
+portfolio:
+  transaction_cost: 0.001
+  window: 20
+  default_lambda: 0.5
