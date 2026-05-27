@@ -200,10 +200,24 @@ to exercise the env-dependent cases.
 ## Reproducibility Notes
 
 - All experiments in the paper use seeds `{42, 123, 456, 789, 1024}`.
-- Window definitions live in `configs/config_W{1..6}.yaml` (train / val / test
-  periods).
 - LLM nondeterminism (`temperature=0.7`) is the dominant source of variance
   across seeds; PPO baselines are exactly reproducible given a seed.
+- The 6 rolling windows use an 18-month train + 12-month test design with a
+  6-month step. The val period equals the test period (no separate hold-out
+  for selection — the best iteration is chosen by training-period validation
+  inside `GIFTController.run()`):
+
+  | Window | Train period            | Test period             |
+  |--------|-------------------------|-------------------------|
+  | W1     | 2019-01-01 .. 2020-06-30 | 2020-07-01 .. 2021-06-30 |
+  | W2     | 2019-07-01 .. 2020-12-31 | 2021-01-01 .. 2021-12-31 |
+  | W3     | 2020-01-01 .. 2021-06-30 | 2021-07-01 .. 2022-06-30 |
+  | W4     | 2020-07-01 .. 2021-12-31 | 2022-01-01 .. 2022-12-31 |
+  | W5     | 2021-01-01 .. 2022-06-30 | 2022-07-01 .. 2023-06-30 |
+  | W6     | 2021-07-01 .. 2022-12-31 | 2023-01-01 .. 2023-12-31 |
+
+  All 6 windows share an identical configuration except for these date
+  ranges; see `configs/config_W{1..6}.yaml`.
 
 ## Anonymous Policy
 
