@@ -1025,7 +1025,7 @@ def intrinsic_reward(updated_s):
         base2_w = _get(baseline2_result, 'avg_weights', {})
         print(f"\n{'Avg Weights':<20} {'GIFT+PPO':>12} {'PPO(test)':>12} {'PPO(train+test)':>14}")
         print(f"{'-'*20} {'-'*12} {'-'*12} {'-'*14}")
-        for name in ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ', 'CASH']:
+        for name in self.tickers + ['CASH']:
             lw = f"{gift_w.get(name, 0):.3f}" if gift_w else 'N/A'
             b1w = f"{base1_w.get(name, 0):.3f}" if base1_w else 'N/A'
             b2w = f"{base2_w.get(name, 0):.3f}" if base2_w else 'N/A'
@@ -1076,7 +1076,7 @@ def intrinsic_reward(updated_s):
         base_w = _get(baseline_result, 'avg_weights', {})
         print(f"\n{'Avg Weights':<20} {'GIFT+PPO':>12} {'Pure PPO':>12}")
         print(f"{'-'*20} {'-'*12} {'-'*12}")
-        for name in ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ', 'CASH']:
+        for name in self.tickers + ['CASH']:
             lw = f"{gift_w.get(name, 0):.3f}" if gift_w else 'N/A'
             bw = f"{base_w.get(name, 0):.3f}" if base_w else 'N/A'
             print(f"  {name:<18} {lw:>12} {bw:>12}")
