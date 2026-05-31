@@ -13,9 +13,13 @@ IC and SHAP diagnostics are computed on the trained critic and fed back to the
 LLM as natural-language COT feedback, closing the loop for the next iteration.
 
 This repository implements GIFT for **portfolio optimization with PPO** as the
-main experimental instantiation — five US equities plus cash, six rolling
-windows from 2019 to 2024, mean-variance reward augmented by the LLM-generated
-intrinsic reward and rule-based shaping. See *Reproducing Main Experiments*.
+main experimental instantiation. Each portfolio panel holds five US equities
+plus a cash position under a long-only simplex constraint, evaluated over six
+rolling windows from 2019 to 2024, with a mean-variance reward augmented by the
+LLM-generated intrinsic reward and rule-based shaping. The full evaluation
+spans **six panels** — three single-sector (Technology, Healthcare, Energy),
+two mixed (Light Mix, Heavy Mix), and one Industrials panel — so the main
+result is a **6 panels × 6 windows** grid. See *Reproducing Main Experiments*.
 
 > **Anonymous double-blind submission.** This release does not include author
 > identity, affiliation, contact information, or links to any external account or
@@ -27,11 +31,16 @@ intrinsic reward and rule-based shaping. See *Reproducing Main Experiments*.
 GIFT/
 ├── main.py                       # Single-window entry point
 ├── core/                         # Library code (env, PPO, GIFT controller, IC/SHAP)
-├── configs/                      # YAML configs: config_demo + config_W1..W6 + main
+├── configs/
+│   ├── config.yaml               # Base/default config (Light Mix panel)
+│   ├── config_W1..W6.yaml        # Legacy per-window configs (Light Mix panel)
+│   ├── windows.yaml              # The 6 rolling windows (shared by all panels)
+│   └── panels/                   # One config per portfolio panel (6 files)
 ├── scripts/
-│   ├── prepare_data.py           # CSV -> pickle preprocessing
+│   ├── prepare_data.py           # CSV -> pickle preprocessing (per panel)
+│   ├── run_panels.py             # 6 panels × 6 windows orchestration
 │   ├── train_single_window.py    # Train one window, save JSON
-│   ├── run_6_windows.py          # Multi-window orchestration (multi-GPU)
+│   ├── run_6_windows.py          # Single-panel multi-window orchestration (legacy)
 │   ├── run_seeds_6windows.sh     # Bash dispatcher: 6 windows × 5 seeds = 30 runs
 │   ├── run_baseline.py           # Pure PPO baseline (no LLM features)
 │   ├── train_and_compare.py      # GIFT vs baseline training curves
@@ -108,32 +117,43 @@ information. The expected CSV schema (case-insensitive, any column order):
 | `adj_close` | float  | adjusted close (used as the price feature)   |
 | `volume`    | float  |                                              |
 
-The default config uses the 5-ticker universe `[TSLA, NFLX, AMZN, MSFT, JNJ]`
-spanning 2019–2024 (training/test windows). Any superset of these tickers
-works — non-target tickers are filtered out at load time. If you prefer your
-own data source, just produce a CSV matching the schema above and drop it at
-`./data/sp500_prices.csv`.
+The stock list for each run comes entirely from `config['data']['tickers']`;
+no ticker symbols are hardcoded in the library. The single downloaded CSV is a
+superset that covers all six panels — non-target tickers are filtered out at
+load time. If you prefer your own data source, just produce a CSV matching the
+schema above and drop it at `./data/sp500_prices.csv`.
 
-### Convert CSV to pickle
+### Convert CSV to per-panel pickles
+
+`scripts/prepare_data.py` extracts one panel's tickers from the CSV into a
+date-indexed pickle. It (1) **validates** the CSV schema and per-ticker
+coverage, (2) **converts** to the requested pickle (~5 s on a 250 MB CSV), and
+(3) **verifies** the output by reloading and reporting per-ticker date coverage.
+
+Generate the pickle for every panel in one loop:
 
 ```bash
-python scripts/prepare_data.py
+for p in "technology:AAPL MSFT NVDA GOOGL META" \
+         "healthcare:JNJ LLY UNH MRK PFE" \
+         "energy:XOM CVX COP SLB EOG" \
+         "light_mix:TSLA NFLX AMZN MSFT JNJ" \
+         "heavy_mix:TSLA NVDA XOM CAT JNJ" \
+         "industrials:CAT GE ETN UNP LMT"; do
+  name=${p%%:*}; ticks=${p#*:}
+  python scripts/prepare_data.py --csv data/sp500_prices.csv \
+      --tickers $ticks --output data/portfolio_${name}.pkl
+done
 ```
 
-The script runs three steps and prints a report:
-1. **Validate** the CSV schema (column names) and per-ticker row coverage — fails
-   fast with a clear message if anything is missing.
-2. **Convert** to `./data/portfolio_5stocks.pkl` (~5 s on a 250 MB CSV).
-3. **Verify** the output by loading the pickle and reporting per-ticker date
-   coverage.
-
-Custom universe / date window:
+Each panel config (`configs/panels/<panel>.yaml`) points its `data.pickle_file`
+at the matching `data/portfolio_<panel>.pkl`. To prepare a single panel (or a
+custom universe / date window):
 
 ```bash
 python scripts/prepare_data.py \
-    --csv path/to/prices.csv \
-    --output data/portfolio_5stocks.pkl \
-    --tickers TSLA NFLX AMZN MSFT JNJ \
+    --csv data/sp500_prices.csv \
+    --output data/portfolio_technology.pkl \
+    --tickers AAPL MSFT NVDA GOOGL META \
     --start 2018-01-01 --end 2024-12-31
 ```
 
@@ -170,19 +190,64 @@ main experiments.
 
 ## Reproducing Main Experiments
 
-### Single window
+The main result is a **6 panels × 6 windows** grid. Each panel is defined by a
+config in `configs/panels/`; the six rolling windows are defined once in
+`configs/windows.yaml`. The runner composes panel × window into a generated
+config and launches `main.py` for each.
+
+### All panels × all windows (main result)
 
 ```bash
+export OPENAI_API_KEY=sk-...
+# All 6 panels × 6 windows = 36 runs (serial by default, GPU 0):
+python scripts/run_panels.py
+
+# A subset (specific panels and/or windows):
+python scripts/run_panels.py --panels technology healthcare --windows W1 W2 --gpu 0
+
+# Generate the merged configs without launching (inspect them first):
+python scripts/run_panels.py --dry-run
+```
+
+Generated per-run configs are written under `configs/_generated/`
+(`<panel>_<window>.yaml`) and results under `./results/<panel>_<window>/`.
+`run_panels.py` is serial by default; to use multiple GPUs, launch disjoint
+panel/window subsets with different `--gpu` values.
+
+### Single run (one panel, one window)
+
+Compose one config by hand, or reuse a generated one:
+
+```bash
+python scripts/run_panels.py --panels technology --windows W1 --dry-run
+python main.py \
+  --config configs/_generated/technology_W1.yaml \
+  --experiment_name technology_W1 \
+  --seed 42
+```
+
+### Legacy single-panel windows
+
+The original per-window configs for the Light Mix panel are retained for
+back-compatibility. They expect `data/portfolio_5stocks.pkl` (the Light Mix
+universe), produced with:
+
+```bash
+python scripts/prepare_data.py --csv data/sp500_prices.csv \
+    --tickers TSLA NFLX AMZN MSFT JNJ --output data/portfolio_5stocks.pkl
 python main.py \
   --config configs/config_W1.yaml \
   --experiment_name W1_seed_42 \
   --seed 42
 ```
 
-### Full main result — 6 windows × 5 seeds
+### Multi-seed variance sweep (Light Mix panel, legacy)
 
-The shell dispatcher launches 6 windows (W1–W6) × 5 seeds = 30 runs and picks
-the least-loaded GPU for each launch:
+`scripts/run_panels.py` runs a single seed per (panel, window) cell. To measure
+seed variance, the legacy dispatcher sweeps the Light Mix panel over 6 windows
+(W1–W6) × 5 seeds = 30 runs, picking the least-loaded GPU for each launch (to
+sweep seeds on another panel, point its `config_W*`-style configs at that
+panel's tickers/pickle, or add a `--seed` loop around `run_panels.py`):
 
 ```bash
 export OPENAI_API_KEY=sk-...
@@ -237,10 +302,14 @@ python -m pytest tests/
 ```
 
 The smoke tests cover imports, indicator/registry sanity, `code_sandbox`
-validation, and a short PPO update loop. The tests do not call the LLM, so a
-dummy `OPENAI_API_KEY` (e.g. `sk-test-dummy`) is sufficient. A
-`./data/portfolio_5stocks.pkl` produced by `scripts/prepare_data.py` is required
-to exercise the env-dependent cases.
+validation, and a short PPO update loop. `tests/test_multi_panel.py` is a
+regression guard for the config-driven stock list: it builds the environment
+and portfolio features for a non-default panel from synthetic data and asserts
+the panel's tickers flow end-to-end. The tests do not call the LLM, so a dummy
+`OPENAI_API_KEY` (e.g. `sk-test-dummy`) is sufficient; `test_multi_panel.py`
+needs no key and no downloaded data. A `./data/portfolio_<panel>.pkl` produced
+by `scripts/prepare_data.py` is required to exercise the env-dependent cases of
+the broader integration test.
 
 ## Reproducibility Notes
 
@@ -262,7 +331,25 @@ to exercise the env-dependent cases.
   | W6     | 2021-07-01 .. 2022-12-31 | 2023-01-01 .. 2023-12-31 |
 
   All 6 windows share an identical configuration except for these date
-  ranges; see `configs/config_W{1..6}.yaml`.
+  ranges; they are defined once in `configs/windows.yaml` and applied to every
+  panel by `scripts/run_panels.py`.
+
+- The six portfolio panels each hold five equities plus cash. Each panel
+  config additionally declares `growth` / `defensive` ticker groups, used only
+  by the optional `sector_exposure` portfolio feature; the groups partition the
+  five tickers and carry no other semantics.
+
+  | Panel        | Tickers                        | Growth                  | Defensive        |
+  |--------------|--------------------------------|-------------------------|------------------|
+  | Technology   | AAPL, MSFT, NVDA, GOOGL, META  | AAPL, NVDA, GOOGL, META | MSFT             |
+  | Healthcare   | JNJ, LLY, UNH, MRK, PFE        | LLY, UNH                | JNJ, MRK, PFE    |
+  | Energy       | XOM, CVX, COP, SLB, EOG        | COP, EOG, SLB           | XOM, CVX         |
+  | Light Mix    | TSLA, NFLX, AMZN, MSFT, JNJ    | TSLA, NFLX, AMZN, MSFT  | JNJ              |
+  | Heavy Mix    | TSLA, NVDA, XOM, CAT, JNJ      | TSLA, NVDA, CAT         | XOM, JNJ         |
+  | Industrials  | CAT, GE, ETN, UNP, LMT         | CAT, GE, ETN            | UNP, LMT         |
+
+  All panels share an identical configuration except for the `data` block; see
+  `configs/panels/<panel>.yaml`.
 
 ## Anonymous Policy
 
