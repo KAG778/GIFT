@@ -1,17 +1,16 @@
 """
 Portfolio environment for RL training.
 
-Simulates portfolio management with 5 stocks (TSLA, NFLX, AMZN, MSFT, JNJ)
-plus a cash asset.
+Simulates portfolio management with the configured stock panel (N stocks + cash).
 
 State vector layout:
-  - Compressed raw state: 10 dims * 5 stocks = 50 dims
-  - ``revise_state`` extras:  K dims * 5 stocks
+  - Compressed raw state: 10 dims * N stocks
+  - ``revise_state`` extras:  K dims * N stocks
   - Portfolio-level features:  P dims
   - Market regime vector:      3 dims (trend / volatility / risk)
-  - Current weights:           6 dims
+  - Current weights:           N+1 dims
 
-Action: 6-dim target weights sampled from a Dirichlet (always summing to 1).
+Action: (N+1)-dim target weights sampled from a Dirichlet (always summing to 1).
 Reward: base mean-variance term + LLM-selected reward rules + intrinsic
 reward emitted by the LLM-generated code.
 """
@@ -21,8 +20,8 @@ import pickle
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
-N_ASSETS = 6  # 5 stocks + cash
+# Fallback only — the active list comes from config['data']['tickers'].
+DEFAULT_TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 WINDOW = 20   # lookback window in trading days
 STATE_CHANNELS = 6  # close, open, high, low, volume, adj_close per day
 
@@ -57,6 +56,8 @@ class PortfolioEnv:
             self.raw_data = pickle.load(f)
 
         self.config = config
+        self.tickers = list(config.get('data', {}).get('tickers', DEFAULT_TICKERS))
+        self.n_assets = len(self.tickers) + 1  # stocks + cash
         self.revise_state_fn = revise_state_fn
         self.portfolio_features_fn = portfolio_features_fn
         self.reward_rules_fn = reward_rules_fn
@@ -77,7 +78,7 @@ class PortfolioEnv:
 
         # State tracking
         self.current_step = 0
-        self.weights = np.ones(N_ASSETS) / N_ASSETS
+        self.weights = np.ones(self.n_assets) / self.n_assets
         self.portfolio_value = 1.0
         self.peak_value = 1.0
 
@@ -90,7 +91,7 @@ class PortfolioEnv:
             day_data = self.raw_data.get(date, {})
             price_row = {}
             vol_row = {}
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 info = day_data.get('price', {}).get(ticker, {})
                 close = info.get('close', 0.0)
                 adj_close = info.get('adjusted_close', close)
@@ -126,7 +127,7 @@ class PortfolioEnv:
 
     def _get_raw_states_dict(self, date_idx: int) -> Dict[str, np.ndarray]:
         """Get raw states for all tickers."""
-        return {t: self._get_raw_state(t, date_idx) for t in TICKERS}
+        return {t: self._get_raw_state(t, date_idx) for t in self.tickers}
 
     def _compress_raw_state(self, raw_state: np.ndarray) -> np.ndarray:
         """Compress the 120-dim raw state into ~10 dims.
@@ -155,9 +156,9 @@ class PortfolioEnv:
 
         parts = []
 
-        # Compressed raw per stock (10 * 5 = 50)
+        # Compressed raw per stock (10 * N)
         compressed = []
-        for ticker in TICKERS:
+        for ticker in self.tickers:
             compressed.append(self._compress_raw_state(raw_states[ticker]))
         parts.append(np.concatenate(compressed))
 
@@ -165,14 +166,14 @@ class PortfolioEnv:
         if self.revise_state_fn:
             # First pass: detect extras dimension from any stock that produces extras
             extras_dim = None
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 full_revised = self.revise_state_fn(raw_states[ticker])
                 if len(full_revised) > 120:
                     extras_dim = len(full_revised) - 120
                     break
             # Second pass: build extras with consistent dimension
             revised_per_stock = []
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 full_revised = self.revise_state_fn(raw_states[ticker])
                 if len(full_revised) > 120:
                     extras = full_revised[120:]
@@ -226,7 +227,7 @@ class PortfolioEnv:
         to ``1.0``.
         """
         self.current_step = WINDOW  # need WINDOW days of history
-        self.weights = np.ones(N_ASSETS) / N_ASSETS
+        self.weights = np.ones(self.n_assets) / self.n_assets
         self.portfolio_value = 1.0
         self.peak_value = 1.0
         return self._compute_state(self.current_step)
@@ -250,7 +251,7 @@ class PortfolioEnv:
         if total > 1e-8:
             target_weights = target_weights / total
         else:
-            target_weights = np.ones(N_ASSETS) / N_ASSETS
+            target_weights = np.ones(self.n_assets) / self.n_assets
 
         prev_weights = self.weights.copy()
         self.current_step += 1
@@ -265,8 +266,8 @@ class PortfolioEnv:
         date = self.dates[self.current_step]
         prev_date = self.dates[self.current_step - 1]
 
-        stock_returns = np.zeros(len(TICKERS))
-        for i, ticker in enumerate(TICKERS):
+        stock_returns = np.zeros(len(self.tickers))
+        for i, ticker in enumerate(self.tickers):
             prev_price = self.prices.get(prev_date, {}).get(ticker, 0.0)
             curr_price = self.prices.get(date, {}).get(ticker, 0.0)
             if prev_price > 0:
@@ -339,7 +340,7 @@ class PortfolioEnv:
             try:
                 raw_states_now = self._get_raw_states_dict(self.current_step)
                 ir_values = []
-                for ticker in TICKERS:
+                for ticker in self.tickers:
                     revised = self.revise_state_fn(raw_states_now[ticker])
                     ir_values.append(float(self.intrinsic_reward_fn(revised)))
                 intrinsic_r = float(np.mean(ir_values))
@@ -389,25 +390,25 @@ class PortfolioEnv:
             }
         indices = np.linspace(WINDOW, len(self.dates) - 2, n, dtype=int)
 
-        revised_per_ticker = {t: [] for t in TICKERS}
+        revised_per_ticker = {t: [] for t in self.tickers}
         forward_list = []
         regime_labels = []
 
         for idx in indices:
             raw_states = self._get_raw_states_dict(idx)
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 revised = self.revise_state_fn(raw_states[ticker])
                 revised_per_ticker[ticker].append(revised)
 
             date = self.dates[idx]
             next_date = self.dates[idx + 1]
             ret = 0.0
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 p0 = self.prices.get(date, {}).get(ticker, 0.0)
                 p1 = self.prices.get(next_date, {}).get(ticker, 0.0)
                 if p0 > 0:
                     ret += (p1 - p0) / p0
-            forward_list.append(ret / len(TICKERS))
+            forward_list.append(ret / len(self.tickers))
 
             if self.detect_regime_fn:
                 rv = self.detect_regime_fn(raw_states)
@@ -417,7 +418,7 @@ class PortfolioEnv:
                 regime_labels.append('neutral')
 
         revised_states_per_ticker = {
-            t: np.array(revised_per_ticker[t]) for t in TICKERS
+            t: np.array(revised_per_ticker[t]) for t in self.tickers
         }
         return {
             'revised_states_per_ticker': revised_states_per_ticker,
@@ -435,25 +436,25 @@ class PortfolioEnv:
         n = min(n_samples, len(self.dates) - WINDOW - 1)
         indices = np.linspace(WINDOW, len(self.dates) - 2, n, dtype=int)
 
-        training_states = {t: [] for t in TICKERS}
+        training_states = {t: [] for t in self.tickers}
         forward_returns = []
 
         for idx in indices:
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 training_states[ticker].append(self._get_raw_state(ticker, idx))
 
             # Forward return: equal-weight portfolio
             date = self.dates[idx]
             next_date = self.dates[idx + 1]
             ret = 0.0
-            for ticker in TICKERS:
+            for ticker in self.tickers:
                 p0 = self.prices.get(date, {}).get(ticker, 0.0)
                 p1 = self.prices.get(next_date, {}).get(ticker, 0.0)
                 if p0 > 0:
                     ret += (p1 - p0) / p0
-            forward_returns.append(ret / len(TICKERS))
+            forward_returns.append(ret / len(self.tickers))
 
-        for ticker in TICKERS:
+        for ticker in self.tickers:
             training_states[ticker] = np.array(training_states[ticker])
         forward_returns = np.array(forward_returns)
 
