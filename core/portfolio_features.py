@@ -1,17 +1,16 @@
 """
 Portfolio-level feature indicators.
 
-Cross-stock indicators that operate on all 5 stocks simultaneously. Unlike
+Cross-stock indicators that operate on all stocks simultaneously. Unlike
 the per-stock indicators in ``feature_library.py``, every function here
 consumes the full portfolio state. Each function receives:
-  * ``raw_states``: dict mapping ``ticker`` to a 120-d state array.
-  * ``current_weights``: 6-d weight vector (5 stocks + cash).
+  * ``raw_states``: dict mapping ``ticker`` to a 120-d state array (insertion
+    order matches the environment's ticker order and weight vector).
+  * ``current_weights``: (n_stocks + 1)-d weight vector (stocks + cash).
 """
 
 import numpy as np
 from typing import Callable
-
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 
 
 def _extract_closes(s: np.ndarray) -> np.ndarray:
@@ -26,12 +25,13 @@ def _extract_volumes(s: np.ndarray) -> np.ndarray:
 
 def compute_momentum_rank(raw_states: dict, window: int = 20,
                           current_weights: np.ndarray = None) -> np.ndarray:
-    """Rank each stock by its past-N day return. 5 dims, normalized to ``[0, 1]``.
+    """Rank each stock by its past-N day return. n dims, normalized to ``[0, 1]``.
 
-    The top-ranked stock receives ``1.0``, the bottom-ranked ``0.2``.
+    The top-ranked stock receives ``1.0``, the bottom-ranked ``1/n``.
     """
+    n = len(raw_states)
     ranks = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         closes = _extract_closes(raw_states[ticker])
         if len(closes) < window + 1 or closes[-window - 1] == 0:
             ranks.append(0.0)
@@ -40,35 +40,37 @@ def compute_momentum_rank(raw_states: dict, window: int = 20,
         ranks.append(ret)
     ranks = np.array(ranks)
     order = np.argsort(ranks)[::-1]
-    result = np.zeros(5)
+    result = np.zeros(n)
     for rank_idx, ticker_idx in enumerate(order):
-        result[ticker_idx] = (5 - rank_idx) / 5.0
+        result[ticker_idx] = (n - rank_idx) / float(n)
     return result
 
 
 def compute_rolling_correlation(raw_states: dict, window: int = 60,
                                 current_weights: np.ndarray = None) -> np.ndarray:
-    """Pairwise rolling correlation. 10 dims (5 choose 2).
+    """Pairwise rolling correlation. n*(n-1)/2 dims (n choose 2).
 
-    Measures co-movement across the five stocks; higher correlation implies
+    Measures co-movement across the stocks; higher correlation implies
     weaker diversification benefit.
     """
+    keys = list(raw_states.keys())
+    n = len(keys)
     all_closes = {}
-    for ticker in TICKERS:
+    for ticker in keys:
         closes = _extract_closes(raw_states[ticker])
         returns = np.diff(closes) / (closes[:-1] + 1e-10)
         all_closes[ticker] = returns[-window:] if len(returns) >= window else returns
 
     corrs = []
-    for i in range(5):
-        for j in range(i + 1, 5):
-            r1 = all_closes[TICKERS[i]]
-            r2 = all_closes[TICKERS[j]]
-            n = min(len(r1), len(r2))
-            if n < 5:
+    for i in range(n):
+        for j in range(i + 1, n):
+            r1 = all_closes[keys[i]]
+            r2 = all_closes[keys[j]]
+            n_seg = min(len(r1), len(r2))
+            if n_seg < 5:
                 corrs.append(0.0)
                 continue
-            r1_seg, r2_seg = r1[-n:], r2[-n:]
+            r1_seg, r2_seg = r1[-n_seg:], r2[-n_seg:]
             std1, std2 = np.std(r1_seg), np.std(r2_seg)
             if std1 < 1e-10 or std2 < 1e-10:
                 corrs.append(0.0)
@@ -80,12 +82,12 @@ def compute_rolling_correlation(raw_states: dict, window: int = 60,
 
 def compute_relative_strength(raw_states: dict, window: int = 20,
                               current_weights: np.ndarray = None) -> np.ndarray:
-    """Excess return of each stock relative to the equal-weight basket. 5 dims.
+    """Excess return of each stock relative to the equal-weight basket. n dims.
 
     Positive = stock outperforms the basket; negative = underperforms.
     """
     all_rets = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         closes = _extract_closes(raw_states[ticker])
         if len(closes) < window + 1 or closes[-window - 1] == 0:
             all_rets.append(0.0)
@@ -104,7 +106,7 @@ def compute_portfolio_volatility(raw_states: dict, window: int = 20,
     Captures the overall risk level of the portfolio.
     """
     all_returns = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         closes = _extract_closes(raw_states[ticker])
         returns = np.diff(closes) / (closes[:-1] + 1e-10)
         all_returns.append(returns)
@@ -127,7 +129,7 @@ def compute_return_dispersion(raw_states: dict, window: int = 20,
     stock-picking strategies.
     """
     recent_rets = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         closes = _extract_closes(raw_states[ticker])
         if len(closes) < 2:
             recent_rets.append(0.0)
@@ -137,15 +139,15 @@ def compute_return_dispersion(raw_states: dict, window: int = 20,
     return np.array([float(np.std(recent_rets, ddof=1))])
 
 
-def compute_sector_exposure(raw_states: dict, current_weights: np.ndarray = None) -> np.ndarray:
-    """``[growth_weight, defensive_weight]`` from current portfolio weights. 2 dims.
-
-    TSLA/NFLX/AMZN/MSFT are treated as growth names; JNJ as defensive.
-    """
+def compute_sector_exposure(raw_states: dict, current_weights: np.ndarray = None,
+                            growth_idx=None, defensive_idx=None) -> np.ndarray:
+    """``[growth_weight, defensive_weight]`` from config-declared ticker groups. 2 dims."""
     if current_weights is None:
         return np.array([0.8, 0.2])
-    growth_weight = float(sum(current_weights[:4]))
-    defensive_weight = float(current_weights[4]) if len(current_weights) > 4 else 0.0
+    g = growth_idx or []
+    d = defensive_idx or []
+    growth_weight = float(sum(current_weights[i] for i in g if i < len(current_weights)))
+    defensive_weight = float(sum(current_weights[i] for i in d if i < len(current_weights)))
     return np.array([growth_weight, defensive_weight])
 
 
@@ -157,7 +159,7 @@ def compute_volume_breadth(raw_states: dict, window: int = 10,
     are receiving attention.
     """
     all_vol_ratios = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         vols = _extract_volumes(raw_states[ticker])
         if len(vols) < window + 1:
             all_vol_ratios.append(1.0)
@@ -166,18 +168,18 @@ def compute_volume_breadth(raw_states: dict, window: int = 10,
         ratio = vols[-1] / avg_vol
         all_vol_ratios.append(ratio)
     above_avg = sum(1 for r in all_vol_ratios if r > 1.0)
-    return np.array([float(above_avg / 5)])
+    return np.array([float(above_avg / len(raw_states))])
 
 
 def compute_mean_reversion_score(raw_states: dict, window: int = 20,
                                  current_weights: np.ndarray = None) -> np.ndarray:
-    """Z-score of each stock's current price vs its N-day mean. 5 dims.
+    """Z-score of each stock's current price vs its N-day mean. n dims.
 
     Positive z = overbought (potential pullback); negative z = oversold
     (potential rebound).
     """
     scores = []
-    for ticker in TICKERS:
+    for ticker in raw_states:
         closes = _extract_closes(raw_states[ticker])
         if len(closes) < window:
             scores.append(0.0)
@@ -226,13 +228,30 @@ PORTFOLIO_INDICATOR_REGISTRY = {
 }
 
 
-def build_portfolio_features(selection: list) -> Callable:
+def build_portfolio_features(selection: list, tickers: list = None,
+                             growth: list = None, defensive: list = None) -> Callable:
     """Build a closure that computes all selected portfolio features.
 
     Combines the chosen portfolio-level indicators into a single callable;
     parameters are clipped to the ranges declared in
     ``PORTFOLIO_INDICATOR_REGISTRY``.
+
+    Parameters
+    ----------
+    selection:
+        List of indicator dicts with ``indicator`` and optional ``params`` keys.
+    tickers:
+        Ordered list of ticker symbols for the panel (insertion order matches
+        the weight vector).
+    growth:
+        Tickers belonging to the growth group (used by ``sector_exposure``).
+    defensive:
+        Tickers belonging to the defensive group (used by ``sector_exposure``).
     """
+    tickers = list(tickers) if tickers else []
+    growth_idx = [tickers.index(t) for t in (growth or []) if t in tickers]
+    defensive_idx = [tickers.index(t) for t in (defensive or []) if t in tickers]
+
     funcs = []
     output_dims = []
 
@@ -244,6 +263,9 @@ def build_portfolio_features(selection: list) -> Callable:
         entry = PORTFOLIO_INDICATOR_REGISTRY[name]
         merged = dict(entry['default_params'])
         merged.update(params)
+        if name == 'sector_exposure':
+            merged['growth_idx'] = growth_idx
+            merged['defensive_idx'] = defensive_idx
         for pk, pv in merged.items():
             if pk in entry['param_ranges']:
                 lo, hi = entry['param_ranges'][pk]
