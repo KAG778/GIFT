@@ -42,9 +42,6 @@ from ppo_agent import PPOAgent
 from metrics import sharpe_ratio, max_drawdown, sortino_ratio, calmar_ratio
 
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
-
-
 def _fmt(val, fmt):
     """Format a value, handling non-numeric gracefully."""
     if isinstance(val, (int, float)):
@@ -93,6 +90,9 @@ class GIFTController:
         # Data paths
         data_cfg = config.get('data', {})
         self.data_path = data_cfg.get('pickle_file', 'data/portfolio_5stocks.pkl')
+        self.tickers = list(data_cfg.get('tickers', []))
+        self.growth = list(data_cfg.get('growth', []))
+        self.defensive = list(data_cfg.get('defensive', []))
 
         # Train/val/test periods
         train_period = exp_cfg.get('train_period', ['2018-01-01', '2021-12-31'])
@@ -397,7 +397,7 @@ class GIFTController:
                 if raw_shap_profile and feature_dim > 0:
                     for j in range(feature_dim):
                         shap_vals = []
-                        for s in range(len(TICKERS)):
+                        for s in range(len(self.tickers)):
                             env_dim = 50 + s * feature_dim + j
                             if env_dim in raw_shap_profile:
                                 shap_vals.append(raw_shap_profile[env_dim])
@@ -521,8 +521,8 @@ class GIFTController:
         print(f"    Sharpe={ep_sharpe:.3f}, Sortino={ep_sortino:.3f}, "
               f"MDD={ep_mdd:.2f}%, Return={ep_return:.2f}%")
         print(f"    Avg weights: " +
-              ", ".join(f"{TICKERS[i]}={avg_weights[i]:.3f}" for i in range(5)) +
-              f", CASH={avg_weights[5]:.3f}")
+              ", ".join(f"{self.tickers[i]}={avg_weights[i]:.3f}" for i in range(len(self.tickers))) +
+              f", CASH={avg_weights[len(self.tickers)]:.3f}")
 
         return {
             f'{label.lower()}_sharpe': ep_sharpe,
@@ -531,8 +531,8 @@ class GIFTController:
             f'{label.lower()}_calmar': ep_calmar,
             f'{label.lower()}_total_return': ep_return,
             f'{label.lower()}_returns': returns,
-            f'{label.lower()}_avg_weights': {**{TICKERS[i]: float(avg_weights[i]) for i in range(5)},
-                                              'CASH': float(avg_weights[5])},
+            f'{label.lower()}_avg_weights': {**{self.tickers[i]: float(avg_weights[i]) for i in range(len(self.tickers))},
+                                              'CASH': float(avg_weights[len(self.tickers)])},
         }
 
     def _default_code_config(self) -> dict:

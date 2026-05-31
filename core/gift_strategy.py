@@ -22,9 +22,6 @@ from ppo_agent import PPOAgent
 from metrics import sharpe_ratio, sortino_ratio, max_drawdown, calmar_ratio
 
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
-
-
 def run_backtest(config: dict, model_path: str, config_path: str,
                  test_period: tuple = None,
                  transaction_cost: float = 0.001) -> dict:
@@ -54,11 +51,15 @@ def run_backtest(config: dict, model_path: str, config_path: str,
     reward_rules = iter_config.get('reward_rules', [])
 
     revise_fn = build_revise_state(stock_features) if stock_features else None
-    port_feat_fn = build_portfolio_features(portfolio_feats) if portfolio_feats else None
     reward_fn = build_reward_rules(reward_rules) if reward_rules else None
 
     # Create test environment
     data_cfg = config.get('data', {})
+    tickers = list(data_cfg.get('tickers', []))
+    growth = list(data_cfg.get('growth', []))
+    defensive = list(data_cfg.get('defensive', []))
+    port_feat_fn = build_portfolio_features(portfolio_feats, tickers=tickers,
+                                            growth=growth, defensive=defensive) if portfolio_feats else None
     if test_period is None:
         test_period = tuple(config.get('experiment', {}).get(
             'test_period', ['2023-01-01', '2023-12-31']))
@@ -114,8 +115,8 @@ def run_backtest(config: dict, model_path: str, config_path: str,
         'calmar': bt_calmar,
         'total_return': bt_total_return,
         'avg_turnover': float(turnover),
-        'avg_weights': {t: float(avg_weights[i]) for i, t in enumerate(TICKERS)},
-        'avg_cash_weight': float(avg_weights[5]),
+        'avg_weights': {t: float(avg_weights[i]) for i, t in enumerate(tickers)},
+        'avg_cash_weight': float(avg_weights[len(tickers)]),
         'n_trading_days': len(returns),
         'final_value': float(portfolio_values[-1]),
     }
@@ -131,8 +132,8 @@ def run_backtest(config: dict, model_path: str, config_path: str,
     print(f"Calmar Ratio: {bt_calmar:.3f}")
     print(f"Avg Turnover: {turnover:.4f}")
     print(f"\nAvg Weights:")
-    for i, t in enumerate(TICKERS):
+    for i, t in enumerate(tickers):
         print(f"  {t}: {avg_weights[i]:.3f}")
-    print(f"  CASH: {avg_weights[5]:.3f}")
+    print(f"  CASH: {avg_weights[len(tickers)]:.3f}")
 
     return result
