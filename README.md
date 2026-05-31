@@ -29,7 +29,7 @@ result is a **6 panels × 6 windows** grid. See *Reproducing Main Experiments*.
 
 ```
 GIFT/
-├── main.py                       # Single-window entry point
+├── main.py                       # Entry point: runs one config (panel/window)
 ├── core/                         # Library code (env, PPO, GIFT controller, IC/SHAP)
 ├── configs/
 │   ├── config.yaml               # Base/default config (Light Mix panel)
@@ -53,11 +53,14 @@ GIFT/
 
 ## Environment
 
-- Python 3.10+ (3.11 tested).
-- PyTorch 2.0+ (CUDA 11.8 or newer recommended; CPU also works for single-window
-  runs).
-- A multi-GPU machine is recommended for the full 6-window × 5-seed sweep but
-  is not required to reproduce a single window.
+- Python 3.10+ (tested with Python 3.10).
+- PyTorch 2.x — **match the wheel to your GPU driver**. Tested with
+  `torch 2.5.1` (CUDA 12.4) on an NVIDIA A100. A wheel built for a newer CUDA
+  than your driver supports will silently fall back to CPU; if `torch` reports
+  `cuda.is_available() == False`, install a `torch` build matching your driver
+  (see *Installation*). CPU also works for the demo / a single run.
+- A GPU is recommended for the full 6 panels × 6 windows grid but is not
+  required to run the demo or a single panel/window.
 
 ## Installation
 
@@ -157,30 +160,39 @@ python scripts/prepare_data.py \
     --start 2018-01-01 --end 2024-12-31
 ```
 
-## API Key
+## API Key and LLM Endpoint
 
-The GIFT loop calls an OpenAI-compatible chat completion endpoint. Export your
-credentials via environment variables (the code never reads keys from anywhere
-else):
+The GIFT loop calls an OpenAI-compatible chat-completion endpoint.
 
-```bash
-export OPENAI_API_KEY=sk-...
-# Optional: point at any OpenAI-compatible endpoint
-export OPENAI_BASE_URL=https://api.openai.com/v1
-```
+- **API key** is read from the environment first (a key written in a config is
+  only a fallback):
 
-The model is set in `configs/*.yaml` (`llm.model`, default `gpt-4o-mini`). If the
-key is missing, scripts that need the LLM will raise a clear error; pipeline /
-sandbox unit tests do not need a real key.
+  ```bash
+  export OPENAI_API_KEY=sk-...
+  ```
+
+- **Endpoint and model** are set per config under `llm`: `llm.base_url`
+  (default `https://api.openai.com/v1`) and `llm.model` (default
+  `gpt-4o-mini`). To use an OpenAI-compatible proxy, edit `llm.base_url` in the
+  config you run — the endpoint is taken from the config, not from an
+  environment variable.
+
+If the key is missing or invalid, scripts that call the LLM raise a clear error;
+the pipeline / sandbox unit tests do not need a real key.
 
 ## Quick Demo
 
 `configs/config_demo.yaml` is a lightweight configuration tuned for smoke testing:
 2 iterations × 1 code sample × 5 PPO episodes. End-to-end runtime is about a
-minute on a single GPU (or a few minutes on CPU).
+minute on a single GPU (or a few minutes on CPU). It uses the Light Mix panel,
+so it needs `data/portfolio_light_mix.pkl` from *Data Preparation* and a valid
+API key:
 
 ```bash
 export OPENAI_API_KEY=sk-...
+# one-time data prep for the demo panel (skip if already done):
+python scripts/prepare_data.py --csv data/sp500_prices.csv \
+    --tickers TSLA NFLX AMZN MSFT JNJ --output data/portfolio_light_mix.pkl
 python main.py --config configs/config_demo.yaml --experiment_name demo --seed 42
 ```
 

@@ -1,5 +1,5 @@
 data:
-  pickle_file: data/portfolio_5stocks.pkl
+  pickle_file: data/portfolio_light_mix.pkl
   csv_file: data/sp500_prices.csv
   tickers: [TSLA, NFLX, AMZN, MSFT, JNJ]
 
