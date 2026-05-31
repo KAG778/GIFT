@@ -70,5 +70,8 @@ Thumbs.db
 .agents/
 .codex/
 
+# Internal planning docs (kept local; never published in anonymous release)
+docs/superpowers/
+
 # Misc
 *.lock
