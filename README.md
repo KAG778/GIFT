@@ -1,5 +1,27 @@
 # GIFT: LLM-Guided State-Reward Interface for Financial Reinforcement Learning
 
+> **Anonymous double-blind submission.** This release does not include author
+> identity, affiliation, contact information, or links to any external account or
+> private service. See [Anonymous Policy](#anonymous-policy) for details.
+
+## Contents
+
+- [Overview](#overview)
+- [Repository layout](#repository-layout)
+- [Environment](#environment)
+- [Installation](#installation)
+- [Data Preparation](#data-preparation)
+- [API Key and LLM Endpoint](#api-key-and-llm-endpoint)
+- [Quick Demo](#quick-demo)
+- [Reproducing Main Experiments](#reproducing-main-experiments)
+- [Expected Outputs](#expected-outputs)
+- [Tests](#tests)
+- [Reproducibility Notes](#reproducibility-notes)
+- [Anonymous Policy](#anonymous-policy)
+- [Citation](#citation)
+
+## Overview
+
 GIFT is a framework in which an LLM acts as the **state-reward interface** for a
 downstream RL agent solving financial decision-making tasks. Concretely, the LLM
 generates two Python functions per iteration:
@@ -19,11 +41,8 @@ rolling windows from 2019 to 2024, with a mean-variance reward augmented by the
 LLM-generated intrinsic reward and rule-based shaping. The full evaluation
 spans **six panels** — three single-sector (Technology, Healthcare, Energy),
 two mixed (Light Mix, Heavy Mix), and one Industrials panel — so the main
-result is a **6 panels × 6 windows** grid. See *Reproducing Main Experiments*.
-
-> **Anonymous double-blind submission.** This release does not include author
-> identity, affiliation, contact information, or links to any external account or
-> private service. See [Anonymous Policy](#anonymous-policy) for details.
+result is a **6 panels × 6 windows** grid. See
+[Reproducing Main Experiments](#reproducing-main-experiments).
 
 ## Repository layout
 
