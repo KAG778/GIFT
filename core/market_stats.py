@@ -15,13 +15,30 @@ ground numerical values in plain English. These stats feed both
 
 import numpy as np
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 TICKER_PROFILES = {
     'TSLA': {'sector': 'EV/Tech', 'vol_profile': 'Very high (~4% daily)'},
     'NFLX': {'sector': 'Streaming', 'vol_profile': 'Medium-high (~2.5% daily)'},
     'AMZN': {'sector': 'E-commerce/Cloud', 'vol_profile': 'Medium (~2.2% daily)'},
-    'MSFT': {'sector': 'Software', 'vol_profile': 'Low-medium (~1.8% daily)'},
+    'MSFT': {'sector': 'Software/Cloud', 'vol_profile': 'Low-medium (~1.8% daily)'},
     'JNJ': {'sector': 'Pharma', 'vol_profile': 'Low (~1.2% daily, defensive)'},
+    'AAPL': {'sector': 'Consumer Tech', 'vol_profile': 'Medium (~1.9% daily)'},
+    'NVDA': {'sector': 'Semiconductors', 'vol_profile': 'Very high (~3.5% daily)'},
+    'GOOGL': {'sector': 'Internet/Ads', 'vol_profile': 'Medium (~2.0% daily)'},
+    'META': {'sector': 'Social/Ads', 'vol_profile': 'High (~2.6% daily)'},
+    'LLY': {'sector': 'Pharma', 'vol_profile': 'Medium (~2.0% daily)'},
+    'UNH': {'sector': 'Healthcare Svcs', 'vol_profile': 'Medium (~1.9% daily)'},
+    'MRK': {'sector': 'Pharma', 'vol_profile': 'Low-medium (~1.5% daily, defensive)'},
+    'PFE': {'sector': 'Pharma', 'vol_profile': 'Low-medium (~1.6% daily, defensive)'},
+    'XOM': {'sector': 'Integrated Energy', 'vol_profile': 'Medium (~1.9% daily)'},
+    'CVX': {'sector': 'Integrated Energy', 'vol_profile': 'Medium (~1.8% daily)'},
+    'COP': {'sector': 'E&P', 'vol_profile': 'High (~2.4% daily)'},
+    'SLB': {'sector': 'Oil Services', 'vol_profile': 'High (~2.5% daily)'},
+    'EOG': {'sector': 'E&P', 'vol_profile': 'High (~2.4% daily)'},
+    'CAT': {'sector': 'Machinery', 'vol_profile': 'Medium (~1.9% daily, cyclical)'},
+    'GE': {'sector': 'Industrials', 'vol_profile': 'Medium-high (~2.3% daily)'},
+    'ETN': {'sector': 'Electrical Equip', 'vol_profile': 'Medium (~1.9% daily)'},
+    'UNP': {'sector': 'Railroads', 'vol_profile': 'Low-medium (~1.6% daily, defensive)'},
+    'LMT': {'sector': 'Defense', 'vol_profile': 'Low (~1.4% daily, defensive)'},
 }
 
 
@@ -47,6 +64,7 @@ def get_market_stats(training_states: dict) -> str:
         prompt. Contains: (1) per-stock profile table, (2) 5x5 correlation
         matrix, (3) average correlation and diversification guidance.
     """
+    tickers = list(training_states.keys())
     lines = []
 
     # Per-stock stats
@@ -54,7 +72,7 @@ def get_market_stats(training_states: dict) -> str:
     lines.append("| Ticker | Sector | Daily Vol | 20d Return | Interpretation |")
     lines.append("|--------|--------|-----------|------------|----------------|")
 
-    for ticker in TICKERS:
+    for ticker in tickers:
         states = training_states.get(ticker)
         if states is None:
             continue
@@ -110,7 +128,7 @@ def get_market_stats(training_states: dict) -> str:
     # Correlation matrix
     lines.append("### Correlation Matrix (20-day rolling returns)")
     all_returns = {}
-    for ticker in TICKERS:
+    for ticker in tickers:
         states = training_states.get(ticker)
         if states is None:
             continue
@@ -125,13 +143,13 @@ def get_market_stats(training_states: dict) -> str:
         if returns_list:
             all_returns[ticker] = np.concatenate(returns_list)
 
-    if len(all_returns) == 5:
-        header = "        " + "  ".join(f"{t:>5s}" for t in TICKERS)
+    if len(all_returns) == len(tickers):
+        header = "        " + "  ".join(f"{t:>5s}" for t in tickers)
         lines.append(header)
         pair_corrs = {}
-        for i, t1 in enumerate(TICKERS):
+        for i, t1 in enumerate(tickers):
             row = f"{t1:>5s}   "
-            for j, t2 in enumerate(TICKERS):
+            for j, t2 in enumerate(tickers):
                 if i == j:
                     row += "  1.00"
                 elif t1 in all_returns and t2 in all_returns:
@@ -179,8 +197,9 @@ def compute_strategy_hint(training_states: dict) -> str:
     Computes all_returns internally and delegates to _compute_strategy_hint.
     Used by gift_controller to pass strategy context to reward_config_prompt.
     """
+    tickers = list(training_states.keys())
     all_returns = {}
-    for ticker in TICKERS:
+    for ticker in tickers:
         states = training_states.get(ticker)
         if states is None:
             continue
@@ -209,10 +228,12 @@ def _compute_strategy_hint(training_states: dict, all_returns: dict) -> str:
     """
     from regime_detector import detect_market_regime
 
+    tickers = list(training_states.keys())
+
     # --- Signal 1: Regime detector (consistent with environment) ---
     # detect_market_regime expects {ticker: 120d_array}, use last snapshot
     single_states = {}
-    for ticker in TICKERS:
+    for ticker in tickers:
         states = training_states.get(ticker)
         if states is None:
             continue
@@ -229,7 +250,7 @@ def _compute_strategy_hint(training_states: dict, all_returns: dict) -> str:
     all_vols = []
     all_rets_20d = []
     per_stock_rets = {}
-    for ticker in TICKERS:
+    for ticker in tickers:
         states = training_states.get(ticker)
         if states is None:
             continue
@@ -269,7 +290,7 @@ def _compute_strategy_hint(training_states: dict, all_returns: dict) -> str:
 
     # --- Average correlation ---
     pair_corrs = []
-    tickers_with_rets = [t for t in TICKERS if t in all_returns]
+    tickers_with_rets = [t for t in tickers if t in all_returns]
     for i, t1 in enumerate(tickers_with_rets):
         for j, t2 in enumerate(tickers_with_rets):
             if i < j:
@@ -307,7 +328,7 @@ def _compute_strategy_hint(training_states: dict, all_returns: dict) -> str:
     lines.append(f"  Volatility trend: {vol_trend:.2f}x {'(RISING - deteriorating!)' if vol_deteriorating else '(stable)'}")
     lines.append(f"  Average 20-day return: {avg_ret_20d:+.1f}%")
     lines.append(f"  Average pairwise correlation: {avg_corr:.2f}")
-    lines.append(f"  Stocks in decline (20d ret < -3%): {n_declining}/5")
+    lines.append(f"  Stocks in decline (20d ret < -3%): {n_declining}/{len(tickers)}")
 
     if vol_deteriorating and regime not in ("Crisis",):
         lines.append("")
