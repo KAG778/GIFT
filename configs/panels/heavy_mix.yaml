@@ -1,0 +1,41 @@
+data:
+  pickle_file: data/portfolio_heavy_mix.pkl
+  csv_file: data/sp500_prices.csv
+  tickers: [TSLA, NVDA, XOM, CAT, JNJ]
+  growth: [TSLA, NVDA, CAT]
+  defensive: [XOM, JNJ]
+
+experiment:
+  train_period: ['2021-01-01', '2022-06-30']
+  val_period: ['2022-07-01', '2022-12-31']
+  test_period: ['2023-01-01', '2023-06-30']
+  sample_count: 3
+  max_iterations: 5
+
+llm:
+  model: gpt-4o-mini
+  temperature: 0.7
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+
+ppo:
+  hidden_dim: 256
+  actor_lr: 0.0003
+  critic_lr: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  epochs_per_update: 5
+  batch_size: 64
+  max_episodes: 50
+  use_twin_critic: true
+  value_clip_epsilon: 0.2
+  dropout_rate: 0.1
+  critic_weight_decay: 0.00001
+  max_grad_norm: 0.5
+
+portfolio:
+  transaction_cost: 0.001
+  window: 20
+  default_lambda: 0.5

@@ -1,0 +1,26 @@
+# Rolling windows shared across all panels (val == test by design).
+windows:
+  - name: W1
+    train_period: ['2019-01-01', '2020-06-30']
+    val_period:   ['2020-07-01', '2021-06-30']
+    test_period:  ['2020-07-01', '2021-06-30']
+  - name: W2
+    train_period: ['2019-07-01', '2020-12-31']
+    val_period:   ['2021-01-01', '2021-12-31']
+    test_period:  ['2021-01-01', '2021-12-31']
+  - name: W3
+    train_period: ['2020-01-01', '2021-06-30']
+    val_period:   ['2021-07-01', '2022-06-30']
+    test_period:  ['2021-07-01', '2022-06-30']
+  - name: W4
+    train_period: ['2020-07-01', '2021-12-31']
+    val_period:   ['2022-01-01', '2022-12-31']
+    test_period:  ['2022-01-01', '2022-12-31']
+  - name: W5
+    train_period: ['2021-01-01', '2022-06-30']
+    val_period:   ['2022-07-01', '2023-06-30']
+    test_period:  ['2022-07-01', '2023-06-30']
+  - name: W6
+    train_period: ['2021-07-01', '2022-12-31']
+    val_period:   ['2023-01-01', '2023-12-31']
+    test_period:  ['2023-01-01', '2023-12-31']
