@@ -52,14 +52,14 @@ GIFT/
 ├── core/                         # Library code (env, PPO, GIFT controller, IC/SHAP)
 ├── configs/
 │   ├── config.yaml               # Base/default config (Light Mix panel)
-│   ├── config_W1..W6.yaml        # Legacy per-window configs (Light Mix panel)
+│   ├── config_W1..W6.yaml        # Per-window configs for the Light Mix panel
 │   ├── windows.yaml              # The 6 rolling windows (shared by all panels)
 │   └── panels/                   # One config per portfolio panel (6 files)
 ├── scripts/
 │   ├── prepare_data.py           # CSV -> pickle preprocessing (per panel)
 │   ├── run_panels.py             # 6 panels × 6 windows orchestration
 │   ├── train_single_window.py    # Train one window, save JSON
-│   ├── run_6_windows.py          # Single-panel multi-window orchestration (legacy)
+│   ├── run_6_windows.py          # Light Mix panel, 6-window orchestration
 │   ├── run_seeds_6windows.sh     # Bash dispatcher: 6 windows × 5 seeds = 30 runs
 │   ├── run_baseline.py           # Pure PPO baseline (no LLM features)
 │   ├── train_and_compare.py      # GIFT vs baseline training curves
@@ -257,11 +257,11 @@ python main.py \
   --seed 42
 ```
 
-### Legacy single-panel windows
+### Single-panel windows (Light Mix)
 
-The original per-window configs for the Light Mix panel are retained for
-back-compatibility. They expect `data/portfolio_5stocks.pkl` (the Light Mix
-universe), produced with:
+For convenience, `configs/config_W1..W6.yaml` run the Light Mix panel directly,
+one window per config, without the panel composer. They expect
+`data/portfolio_5stocks.pkl` (the Light Mix universe), produced with:
 
 ```bash
 python scripts/prepare_data.py --csv data/sp500_prices.csv \
@@ -272,12 +272,12 @@ python main.py \
   --seed 42
 ```
 
-### Multi-seed variance sweep (Light Mix panel, legacy)
+### Multi-seed variance sweep (Light Mix panel)
 
 `scripts/run_panels.py` runs a single seed per (panel, window) cell. To measure
-seed variance, the legacy dispatcher sweeps the Light Mix panel over 6 windows
-(W1–W6) × 5 seeds = 30 runs, picking the least-loaded GPU for each launch (to
-sweep seeds on another panel, point its `config_W*`-style configs at that
+seed variance, `scripts/run_seeds_6windows.sh` sweeps the Light Mix panel over 6
+windows (W1–W6) × 5 seeds = 30 runs, picking the least-loaded GPU for each launch
+(to sweep seeds on another panel, point its `config_W*`-style configs at that
 panel's tickers/pickle, or add a `--seed` loop around `run_panels.py`):
 
 ```bash
