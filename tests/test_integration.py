@@ -69,7 +69,8 @@ def test_feature_library():
 def test_portfolio_features():
     """Test portfolio-level features."""
     print("\n3. Testing portfolio_features...")
-    from portfolio_features import build_portfolio_features, PORTFOLIO_INDICATOR_REGISTRY, TICKERS
+    from portfolio_features import build_portfolio_features, PORTFOLIO_INDICATOR_REGISTRY
+    TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 
     np.random.seed(42)
     raw_states = {}
@@ -115,7 +116,8 @@ def test_reward_rules():
 def test_regime_detector():
     """Test regime detector."""
     print("\n5. Testing regime_detector...")
-    from regime_detector import detect_market_regime, TICKERS
+    from regime_detector import detect_market_regime
+    TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 
     np.random.seed(42)
     raw_states = {}

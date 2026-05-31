@@ -17,8 +17,6 @@ mean-variance reward. The LLM selects and parameterizes them on each iteration
 import numpy as np
 from typing import Callable
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
-
 
 def rule_penalize_concentration(weights: np.ndarray, params: dict,
                                 regime_vector: np.ndarray = None, **kwargs) -> float:
