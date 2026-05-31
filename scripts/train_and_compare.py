@@ -39,7 +39,6 @@ from ppo_agent import PPOAgent, set_seed
 from metrics import sharpe_ratio, sortino_ratio, max_drawdown, calmar_ratio
 from reward_rules import REWARD_RULE_REGISTRY, build_reward_rules
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 WINDOWS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6']
 SEEDS = [123, 42, 789]
 RESULTS_BASE = PROJECT_DIR / 'results'

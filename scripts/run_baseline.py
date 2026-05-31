@@ -21,7 +21,6 @@ from portfolio_env import PortfolioEnv
 from ppo_agent import PPOAgent
 from metrics import sharpe_ratio, sortino_ratio, max_drawdown, calmar_ratio
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 
 
 def run_baseline(config_path: str, experiment_name: str = 'ppo_baseline'):
@@ -42,6 +41,7 @@ def run_baseline(config_path: str, experiment_name: str = 'ppo_baseline'):
     hidden_dim = ppo_cfg.get('hidden_dim', 256)
     transaction_cost = config.get('portfolio', {}).get('transaction_cost', 0.001)
     data_path = config.get('data', {}).get('pickle_file', 'data/portfolio_5stocks.pkl')
+    tickers = list(config.get('data', {}).get('tickers', []))
 
     # Fixed features: a standard set, no LLM optimization
     stock_features = [
@@ -198,9 +198,9 @@ def run_baseline(config_path: str, experiment_name: str = 'ppo_baseline'):
     print(f"  Max Drawdown:  {test_mdd:.2f}%")
     print(f"  Calmar Ratio:  {test_calmar:.3f}")
     print(f"  Avg Weights:")
-    for i, t in enumerate(TICKERS):
+    for i, t in enumerate(tickers):
         print(f"    {t}: {avg_weights[i]:.3f}")
-    print(f"    CASH: {avg_weights[5]:.3f}")
+    print(f"    CASH: {avg_weights[len(tickers)]:.3f}")
 
     # Save results
     result = {
@@ -208,8 +208,8 @@ def run_baseline(config_path: str, experiment_name: str = 'ppo_baseline'):
         'val_sharpe': val_sharpe, 'val_mdd': val_mdd, 'val_return': val_return,
         'test_sharpe': test_sharpe, 'test_sortino': test_sortino,
         'test_mdd': test_mdd, 'test_calmar': test_calmar, 'test_return': test_return,
-        'avg_weights': {**{t: float(avg_weights[i]) for i, t in enumerate(TICKERS)},
-                        'CASH': float(avg_weights[5])},
+        'avg_weights': {**{t: float(avg_weights[i]) for i, t in enumerate(tickers)},
+                        'CASH': float(avg_weights[len(tickers)])},
         'n_test_days': len(test_returns),
         'features': [f['indicator'] for f in stock_features] + [f['indicator'] for f in portfolio_features],
     }

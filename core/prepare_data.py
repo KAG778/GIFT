@@ -9,7 +9,8 @@ import pickle
 import argparse
 from pathlib import Path
 
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
+# Fallback only — callers pass --tickers / the tickers argument explicitly.
+DEFAULT_TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 DEFAULT_CSV = 'data/sp500_prices.csv'
 
 
@@ -17,7 +18,7 @@ def prepare_data(csv_path: str, output_path: str, tickers: list = None,
                  start_date: str = None, end_date: str = None):
     """Convert CSV to pickle format for BacktestDataset."""
     if tickers is None:
-        tickers = TICKERS
+        tickers = DEFAULT_TICKERS
 
     print(f"Loading CSV from {csv_path}...")
     df = pd.read_csv(csv_path)
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv', default=DEFAULT_CSV)
     parser.add_argument('--output', default='data/portfolio_5stocks.pkl')
-    parser.add_argument('--tickers', nargs='+', default=TICKERS)
+    parser.add_argument('--tickers', nargs='+', default=DEFAULT_TICKERS)
     parser.add_argument('--start', default=None)
     parser.add_argument('--end', default=None)
     args = parser.parse_args()
