@@ -2,18 +2,16 @@
 Market-level regime detector for portfolio optimization.
 
 Computes a 3-dimensional regime vector from the equal-weight portfolio of all
-5 stocks:
+stocks in the configured panel:
   [0] trend_direction:  [-1, +1]  (positive = up, negative = down)
   [1] volatility_level: [0, 1]    (higher = more unstable market)
   [2] risk_level:       [0, 1]    (higher = greater risk)
 
-Input: dict of 5 raw states {ticker: 120d_array}. The output becomes part of
-the PPO state vector so the agent can perceive the market environment.
+Input: dict of per-ticker raw states {ticker: 120d_array}. The output becomes
+part of the PPO state vector so the agent can perceive the market environment.
 """
 
 import numpy as np
-
-TICKERS = ['TSLA', 'NFLX', 'AMZN', 'MSFT', 'JNJ']
 
 
 def _extract_closes(s: np.ndarray) -> np.ndarray:
@@ -26,10 +24,7 @@ def detect_market_regime(raw_states: dict) -> np.ndarray:
 
     Returns: ``[trend_direction, volatility_level, risk_level]``.
     """
-    all_closes = []
-    for ticker in TICKERS:
-        if ticker in raw_states:
-            all_closes.append(_extract_closes(raw_states[ticker]))
+    all_closes = [_extract_closes(s) for s in raw_states.values()]
 
     if not all_closes:
         return np.array([0.0, 0.5, 0.0])
