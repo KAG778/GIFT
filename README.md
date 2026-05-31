@@ -346,10 +346,19 @@ the broader integration test.
   ranges; they are defined once in `configs/windows.yaml` and applied to every
   panel by `scripts/run_panels.py`.
 
-- The six portfolio panels each hold five equities plus cash. Each panel
-  config additionally declares `growth` / `defensive` ticker groups, used only
-  by the optional `sector_exposure` portfolio feature; the groups partition the
-  five tickers and carry no other semantics.
+- **Design invariant — five equities + cash.** Every panel holds exactly
+  **five risky assets plus one cash position**, i.e. a **6-dimensional**,
+  long-only weight vector (cash is the last component). The five tickers are
+  fully **config-driven** (`config['data']['tickers']`) and no ticker symbol is
+  hardcoded in the library — swapping a panel means editing only the config.
+  The *count*, however, is a fixed design constant across all panels and
+  experiments: the few positional constants in the code (a 6-dim weight vector
+  whose first five entries are the stocks and the sixth is cash) intentionally
+  encode this five-plus-cash invariant and are not meant to vary per run.
+
+- Each panel config additionally declares `growth` / `defensive` ticker
+  groups, used only by the optional `sector_exposure` portfolio feature; the
+  groups partition the five tickers and carry no other semantics.
 
   | Panel        | Tickers                        | Growth                  | Defensive        |
   |--------------|--------------------------------|-------------------------|------------------|
