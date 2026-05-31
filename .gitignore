@@ -75,3 +75,6 @@ docs/superpowers/
 
 # Misc
 *.lock
+
+# Generated panel x window configs
+configs/_generated/
