@@ -35,8 +35,8 @@ TICKER_PROFILES = {
     'SLB': {'sector': 'Oil Services', 'vol_profile': 'High (~2.5% daily)'},
     'EOG': {'sector': 'E&P', 'vol_profile': 'High (~2.4% daily)'},
     'CAT': {'sector': 'Machinery', 'vol_profile': 'Medium (~1.9% daily, cyclical)'},
-    'GE': {'sector': 'Industrials', 'vol_profile': 'Medium-high (~2.3% daily)'},
-    'ETN': {'sector': 'Electrical Equip', 'vol_profile': 'Medium (~1.9% daily)'},
+    'BA': {'sector': 'Aerospace', 'vol_profile': 'High (~2.5% daily, cyclical)'},
+    'WM': {'sector': 'Waste/Environmental', 'vol_profile': 'Low (~1.3% daily, defensive)'},
     'UNP': {'sector': 'Railroads', 'vol_profile': 'Low-medium (~1.6% daily, defensive)'},
     'LMT': {'sector': 'Defense', 'vol_profile': 'Low (~1.4% daily, defensive)'},
 }

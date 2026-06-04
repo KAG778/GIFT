@@ -1,9 +1,9 @@
 data:
   pickle_file: data/portfolio_industrials.pkl
   csv_file: data/sp500_prices.csv
-  tickers: [CAT, GE, ETN, UNP, LMT]
-  growth: [CAT, GE, ETN]
-  defensive: [UNP, LMT]
+  tickers: [BA, CAT, UNP, LMT, WM]
+  growth: [BA, CAT]
+  defensive: [UNP, LMT, WM]
 
 experiment:
   train_period: ['2021-01-01', '2022-06-30']

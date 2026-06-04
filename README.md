@@ -160,7 +160,7 @@ for p in "technology:AAPL MSFT NVDA GOOGL META" \
          "energy:XOM CVX COP SLB EOG" \
          "light_mix:TSLA NFLX AMZN MSFT JNJ" \
          "heavy_mix:TSLA NVDA XOM CAT JNJ" \
-         "industrials:CAT GE ETN UNP LMT"; do
+         "industrials:BA CAT UNP LMT WM"; do
   name=${p%%:*}; ticks=${p#*:}
   python scripts/prepare_data.py --csv data/sp500_prices.csv \
       --tickers $ticks --output data/portfolio_${name}.pkl
@@ -386,7 +386,7 @@ the broader integration test.
   | Energy       | XOM, CVX, COP, SLB, EOG        | COP, EOG, SLB           | XOM, CVX         |
   | Light Mix    | TSLA, NFLX, AMZN, MSFT, JNJ    | TSLA, NFLX, AMZN, MSFT  | JNJ              |
   | Heavy Mix    | TSLA, NVDA, XOM, CAT, JNJ      | TSLA, NVDA, CAT         | XOM, JNJ         |
-  | Industrials  | CAT, GE, ETN, UNP, LMT         | CAT, GE, ETN            | UNP, LMT         |
+  | Industrials  | BA, CAT, UNP, LMT, WM          | BA, CAT                 | UNP, LMT, WM     |
 
   All panels share an identical configuration except for the `data` block; see
   `configs/panels/<panel>.yaml`.
