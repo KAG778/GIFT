@@ -1,9 +1,5 @@
 # GIFT: LLM-Guided State-Reward Interface for Financial Reinforcement Learning
 
-> **Anonymous double-blind submission.** This release does not include author
-> identity, affiliation, contact information, or links to any external account or
-> private service. See [Anonymous Policy](#anonymous-policy) for details.
-
 ## Contents
 
 - [Overview](#overview)
